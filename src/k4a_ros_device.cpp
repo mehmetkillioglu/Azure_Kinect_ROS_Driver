@@ -45,7 +45,11 @@ K4AROSDevice::K4AROSDevice()
     // clang-format on
     last_capture_time_usec_(0),
     last_imu_time_usec_(0),
-    imu_stream_end_of_file_(false)
+    imu_stream_end_of_file_(false),
+    mVideoQos(1), 
+    mDepthQos(1), 
+    mSensQos(1),
+    mPoseQos(1)
 {
   // Declare an image transport 
   auto image_transport_ = new image_transport::ImageTransport(static_cast<rclcpp::Node::SharedPtr>(this));
@@ -229,6 +233,19 @@ K4AROSDevice::K4AROSDevice()
     RCLCPP_INFO(this->get_logger(),"Depth Sensor Version: %d.%d.%d", version_info.depth_sensor.major, version_info.depth_sensor.minor,
              version_info.depth_sensor.iteration);
   }
+  mVideoQos.keep_last(5);
+  mVideoQos.best_effort();
+  mVideoQos.durability_volatile();
+  
+  mDepthQos.keep_last(5);
+  mDepthQos.best_effort();
+  mDepthQos.durability_volatile();
+
+  mSensQos.keep_last(5);
+  mSensQos.best_effort();
+  mSensQos.durability_volatile();
+  
+  
 
   // Register our topics
   if (params_.color_format == "jpeg")
@@ -241,27 +258,31 @@ K4AROSDevice::K4AROSDevice()
   }
   else if (params_.color_format == "bgra")
   {
-    rgb_raw_publisher_ = image_transport_->advertise("rgb/image_raw", 1, true); 
+    rgb_raw_publisher_ = image_transport::create_publisher(this,"rgb/image_raw",mVideoQos.get_rmw_qos_profile());
+    //rgb_raw_publisher_ = image_transport_->advertise("rgb/image_raw", 1, true); 
   }
   rgb_raw_camerainfo_publisher_ = this->create_publisher<CameraInfo>("rgb/camera_info", 1);
   
-  depth_raw_publisher_ = image_transport_->advertise("depth/image_raw", 1, true); 
+  depth_raw_publisher_ = image_transport::create_publisher(this,"depth/image_raw",mVideoQos.get_rmw_qos_profile());
+  //depth_raw_publisher_ = image_transport_->advertise("depth/image_raw", 1, true); 
   depth_raw_camerainfo_publisher_ = this->create_publisher<CameraInfo>("depth/camera_info", 1);
-
-
-  depth_rect_publisher_ = image_transport_->advertise("depth_to_rgb/image_raw", 1, true); 
+  
+  depth_rect_publisher_ = image_transport::create_publisher(this,"depth_to_rgb/image_raw",mVideoQos.get_rmw_qos_profile());
+  //depth_rect_publisher_ = image_transport_->advertise("depth_to_rgb/image_raw", 1, true); 
   depth_rect_camerainfo_publisher_ = this->create_publisher<CameraInfo>("depth_to_rgb/camera_info", 1);
 
-  rgb_rect_publisher_ = image_transport_->advertise("rgb_to_depth/image_raw", 1, true); 
+  rgb_rect_publisher_ = image_transport::create_publisher(this,"rgb_to_depth/image_raw",mVideoQos.get_rmw_qos_profile());
+  //rgb_rect_publisher_ = image_transport_->advertise("rgb_to_depth/image_raw", 1, true); 
   rgb_rect_camerainfo_publisher_ = this->create_publisher<CameraInfo>("rgb_to_depth/camera_info", 1);
 
-  ir_raw_publisher_ = image_transport_->advertise("ir/image_raw", 1, true); 
+  ir_raw_publisher_ = image_transport::create_publisher(this,"ir/image_raw",mVideoQos.get_rmw_qos_profile()); 
+  //ir_raw_publisher_ = image_transport_->advertise("ir/image_raw", 1, true); 
   ir_raw_camerainfo_publisher_ = this->create_publisher<CameraInfo>("ir/camera_info", 1);
 
-  imu_orientation_publisher_ = this->create_publisher<Imu>("imu", 200);
+  imu_orientation_publisher_ = this->create_publisher<Imu>("imu",mSensQos);
 
   if (params_.point_cloud || params_.rgb_point_cloud) {
-    pointcloud_publisher_ = this->create_publisher<PointCloud2>("points2", 1);
+    pointcloud_publisher_ = this->create_publisher<PointCloud2>("points2",mDepthQos);
   }
 
 #if defined(K4A_BODY_TRACKING)

@@ -131,7 +131,10 @@ class K4AROSDevice : public rclcpp::Node
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_orientation_publisher_;
 
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_publisher_;
-
+  rclcpp::QoS mVideoQos;
+  rclcpp::QoS mDepthQos;
+  rclcpp::QoS mSensQos;
+  rclcpp::QoS mPoseQos;
 #if defined(K4A_BODY_TRACKING)
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr body_marker_publisher_; 
 
